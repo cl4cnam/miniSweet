@@ -66,9 +66,14 @@
 # ------------
 #
 #===============================
+
+# Put DOM variables into funcSug variables
+#------------------------------------------
 .var innerWidth <-- .import innerWidth
 .var innerHeight <-- .import innerHeight
 
+# The 4 sweets live in parallel
+#------------------------------
 {par
 	(lifeOfSweet 'sweet1' '#ff0000' 10 10 100 100)
 	(lifeOfSweet 'sweet2' '#00ff00' [$innerWidth / 3] [$innerHeight / 3] 100 100)
