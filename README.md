@@ -1,0 +1,3 @@
+# miniSweet
+
+(funcSug example program)
