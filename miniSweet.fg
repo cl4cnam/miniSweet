@@ -29,9 +29,13 @@
 	# rest of life
 	#=============
 	{par
+		# send infos to others
+		#======================
 		%continuous send drawing `
 			send('me', drawing)
 		`
+		# adapt itself to others' infos
+		#==============================
 		%continuous adapt drawing `
 			function collision(pos1, size1, pos2, size2) {
 				return -size2 <= (pos2-pos1) && (pos2-pos1) <= size1
@@ -53,6 +57,8 @@
 				}
 			}
 		`
+		# act  
+		#=====
 		%continuous play drawing `
 			drawing.setAttribute('x', v(drawing.x) + drawing.dx*delta/30)
 			drawing.setAttribute('y', v(drawing.y) + drawing.dy*delta/30)
