@@ -4,40 +4,54 @@
 # -----------
 #
 #===============================
+{prepContinuous `
+	function between(n, mini, maxi) {return mini < n && n < maxi}
+	function collision(pos1, size1, pos2, size2) {
+		return -size2 <= (pos2-pos1) && (pos2-pos1) <= size1
+	}
+	function colliSweet(sweet1, sweet2) {
+		return collision(v(sweet1.x), v(sweet1.width), v(sweet2.x), v(sweet2.width))
+				&& collision(v(sweet1.y), v(sweet1.height), v(sweet2.y), v(sweet2.height))
+	}
+`}
+
 {short () `
 	const svg = document.getElementById('gameZone')
 	svg.setAttribute('width', innerWidth)
 	svg.setAttribute('height', innerHeight)
 `}
 
-{deffunc drawNewSweet (p_id p_w p_h)
-	:displayNewSVGElementIn (+ '<rect id="' $p_id '" width="' $p_w '" height="' $p_h '" rx="15" x="0" y="0" />') 'svg'
+{deffunc drawNewSweet (p_w p_h)
+	:displayNewSVGElementIn (+ '<rect width="' $p_w '" height="' $p_h '" rx="15" x="0" y="0" />') 'svg'
 }
 
-{deffunc lifeOfSweet (p_sName p_color p_x p_y p_width p_height)
+{deffunc lifeOfSweet (p_color p_x p_y p_width p_height)
 	# birth
 	#==========
-	.var thisSweet <-- %drawNewSweet $p_sName $p_width $p_height
+	.var thisSweet <-- :drawNewSweet $p_width $p_height
 	{short (thisSweet p_color p_x p_y) `
 		thisSweet.style.fill = p_color
 		thisSweet.setAttribute('x', p_x)
 		thisSweet.setAttribute('y', p_y)
-		thisSweet.dx = 2
-		thisSweet.dy = -2
+		thisSweet.dx = Math.floor(5*Math.random())-2
+		thisSweet.dy = Math.floor(5*Math.random())-2
+		thisSweet.type = Math.floor(2*Math.random())
+		thisSweet.eltCollision = null
+		thisSweet.age = 0
 	`}
 	
-	# rest of life
+	# after birth
 	#=============
 	.var stopMove
 	.var restartMove
+	.var newBirth
 	{par
 		%continuous send thisSweet `
 			send('oneSweet', thisSweet)
 		`
 		%continuous adapt thisSweet `
-			function collision(pos1, size1, pos2, size2) {
-				return -size2 <= (pos2-pos1) && (pos2-pos1) <= size1
-			}
+			thisSweet.age += 1
+
 			// Bouncing
 			//---------
 			if (v(thisSweet.x) + v(thisSweet.width) > innerWidth) thisSweet.dx = - Math.abs(thisSweet.dx)
@@ -47,14 +61,32 @@
 			
 			// Meeting
 			//--------
-			for (const other of events.get('oneSweet')) {
-				if (thisSweet != other
-						&& collision(v(thisSweet.x), v(thisSweet.width), v(other.x), v(other.width))
-						&& collision(v(thisSweet.y), v(thisSweet.height), v(other.y), v(other.height))   ) {
-					thisSweet.style.fill = '#cccccc'
+			for (const otherSweet of events.get('oneSweet')) {
+				if (thisSweet != otherSweet && ! thisSweet.eltCollision && colliSweet(thisSweet, otherSweet)  ) {
+					//~ thisSweet.style.fill = '#cccccc'
+					thisSweet.eltCollision = otherSweet
+					if (between(thisSweet.age, 500, 2000) && between(otherSweet.age, 500, 2000) && thisSweet.type == 0 && otherSweet.type == 1) {
+						// New birth
+						goBip('newBirth')
+					}
+				} else if (thisSweet != otherSweet && thisSweet.eltCollision === otherSweet && ! colliSweet(thisSweet, otherSweet)  ) {
+					thisSweet.eltCollision = null
 				}
 			}
 		`
+		{while true
+			:await newBirth beep
+			{spawn supplLifeOfSweet
+				(lifeOfSweet
+					'#cccccc'
+					{short (thisSweet) `return v(thisSweet.x)`}
+					{short (thisSweet) `return v(thisSweet.y)`}
+					{short (thisSweet) `return v(thisSweet.width)/2`}
+					{short (thisSweet) `return v(thisSweet.height)/2`}
+				)
+			}
+			
+		}
 		{while true
 			%doOnce
 				%continuous play thisSweet `
@@ -65,9 +97,9 @@
 			:await restartMove beep
 		}
 		{while true
-			.awaitClickBeep (+ '#' $p_sName)
+			.awaitClickBeep $thisSweet
 			.bip stopMove
-			.awaitClickBeep (+ '#' $p_sName)
+			.awaitClickBeep $thisSweet
 			.bip restartMove
 		}
 	}
@@ -81,10 +113,12 @@
 #===============================
 .var innerWidth <-- .import innerWidth
 .var innerHeight <-- .import innerHeight
+.var supplLifeOfSweet
 
 {par
-	(lifeOfSweet 'sweet1' '#ff0000' 10 10 100 100)
-	(lifeOfSweet 'sweet2' '#00ff00' [$innerWidth / 3] [$innerHeight / 3] 100 100)
-	(lifeOfSweet 'sweet3' '#0000ff' [[$innerWidth * 3] / 4] [[$innerHeight * 1] / 4] 100 100)
-	(lifeOfSweet 'sweet4' '#ffff00' [[$innerWidth * 3] / 4] [[$innerHeight * 3] / 4] 100 100)
+	*supplLifeOfSweet
+	(lifeOfSweet '#ff0000' 10 10 100 100)
+	(lifeOfSweet '#00ff00' [$innerWidth / 3] [$innerHeight / 3] 100 100)
+	(lifeOfSweet '#0000ff' [[$innerWidth * 3] / 4] [[$innerHeight * 1] / 4] 100 100)
+	(lifeOfSweet '#ffff00' [[$innerWidth * 3] / 4] [[$innerHeight * 3] / 4] 100 100)
 }
