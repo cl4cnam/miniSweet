@@ -15,7 +15,7 @@
 	}
 `}
 
-{short () `
+{js () `
 	const svg = document.getElementById('gameZone')
 	svg.setAttribute('width', innerWidth)
 	svg.setAttribute('height', innerHeight)
@@ -29,7 +29,7 @@
 	# birth
 	#==========
 	.var thisSweet <-- :drawNewSweet $p_width $p_height
-	{short (thisSweet p_color p_x p_y) `
+	{js (thisSweet p_color p_x p_y) `
 		thisSweet.style.fill = p_color
 		thisSweet.setAttribute('x', p_x)
 		thisSweet.setAttribute('y', p_y)
@@ -42,14 +42,17 @@
 	
 	# after birth
 	#=============
-	.var stopMove
-	.var restartMove
+	.var move
 	.var newBirth
 	{par
-		%continuous send thisSweet `
+		# broadcasting the sweet
+		#-----------------------
+		%whileTrueAwaitFrame send thisSweet `
 			send('oneSweet', thisSweet)
 		`
-		%continuous adapt thisSweet `
+		# bouncing and meeting management
+		#--------------------------------
+		%whileTrueAwaitFrame adapt thisSweet `
 			thisSweet.age += 1
 
 			// Bouncing
@@ -62,45 +65,49 @@
 			// Meeting
 			//--------
 			for (const otherSweet of events.get('oneSweet')) {
+				// When some sweets newly collide, generate a new birth
 				if (thisSweet != otherSweet && ! thisSweet.eltCollision && colliSweet(thisSweet, otherSweet)  ) {
-					//~ thisSweet.style.fill = '#cccccc'
 					thisSweet.eltCollision = otherSweet
 					if (between(thisSweet.age, 500, 2000) && between(otherSweet.age, 500, 2000) && thisSweet.type == 0 && otherSweet.type == 1) {
-						// New birth
+						// send a 'New birth' signal
 						goBip('newBirth')
 					}
+				// Mark the end of collision
 				} else if (thisSweet != otherSweet && thisSweet.eltCollision === otherSweet && ! colliSweet(thisSweet, otherSweet)  ) {
 					thisSweet.eltCollision = null
 				}
 			}
 		`
-		{while true
+		# birth management
+		#--------------------------------
+		{whileTrue
+			# await a newBirth signal
 			:await newBirth beep
+			# add a new parallel branch in 'supplLifeOfSweet' "par"
 			{spawn supplLifeOfSweet
 				(lifeOfSweet
 					'#cccccc'
-					{short (thisSweet) `return v(thisSweet.x)`}
-					{short (thisSweet) `return v(thisSweet.y)`}
-					{short (thisSweet) `return v(thisSweet.width)/2`}
-					{short (thisSweet) `return v(thisSweet.height)/2`}
+					{js (thisSweet) `return v(thisSweet.x)`}
+					{js (thisSweet) `return v(thisSweet.y)`}
+					{js (thisSweet) `return v(thisSweet.width)/2`}
+					{js (thisSweet) `return v(thisSweet.height)/2`}
 				)
 			}
 			
 		}
-		{while true
-			%doOnce
-				%continuous play thisSweet `
-					thisSweet.setAttribute('x', v(thisSweet.x) + thisSweet.dx*delta/30)
-					thisSweet.setAttribute('y', v(thisSweet.y) + thisSweet.dy*delta/30)
-				`
-			until stopMove
-			:await restartMove beep
-		}
-		{while true
+		# movement of the sweet
+		#----------------------
+		{whileTrueAwaitFrame @move play thisSweet `
+			thisSweet.setAttribute('x', v(thisSweet.x) + thisSweet.dx*delta/30)
+			thisSweet.setAttribute('y', v(thisSweet.y) + thisSweet.dy*delta/30)
+		`}
+		# pausing management
+		#-------------------
+		{whileTrue
 			.awaitClickBeep $thisSweet
-			.bip stopMove
+			.pause move
 			.awaitClickBeep $thisSweet
-			.bip restartMove
+			.resume move
 		}
 	}
 }
@@ -119,6 +126,6 @@
 	*supplLifeOfSweet
 	(lifeOfSweet '#ff0000' 10 10 100 100)
 	(lifeOfSweet '#00ff00' [$innerWidth / 3] [$innerHeight / 3] 100 100)
-	(lifeOfSweet '#0000ff' [[$innerWidth * 3] / 4] [[$innerHeight * 1] / 4] 100 100)
-	(lifeOfSweet '#ffff00' [[$innerWidth * 3] / 4] [[$innerHeight * 3] / 4] 100 100)
+	(lifeOfSweet '#0000ff' [$innerWidth * 0.75] [$innerHeight * 0.25] 100 100)
+	(lifeOfSweet '#ffff00' [$innerWidth * 0.75] [$innerHeight * 0.75] 100 100)
 }
