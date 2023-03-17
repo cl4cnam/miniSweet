@@ -70,7 +70,7 @@
 					thisSweet.eltCollision = otherSweet
 					if (between(thisSweet.age, 500, 2000) && between(otherSweet.age, 500, 2000) && thisSweet.type == 0 && otherSweet.type == 1) {
 						// send a 'New birth' signal
-						goBip('newBirth')
+						sugBip('newBirth')
 					}
 				// Mark the end of collision
 				} else if (thisSweet != otherSweet && thisSweet.eltCollision === otherSweet && ! colliSweet(thisSweet, otherSweet)  ) {
