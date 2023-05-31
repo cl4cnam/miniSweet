@@ -1,0 +1,122 @@
+#!syntax:pythonic
+
+#===============================
+#
+# Preparation
+# -----------
+#
+#===============================
+prepContinuous(`
+	function between(n, mini, maxi) {return mini < n && n < maxi}
+	function collision(pos1, size1, pos2, size2) {
+		return -size2 <= (pos2-pos1) && (pos2-pos1) <= size1
+	}
+	function colliSweet(sweet1, sweet2) {
+		return collision(v(sweet1.x), v(sweet1.width), v(sweet2.x), v(sweet2.width))
+				&& collision(v(sweet1.y), v(sweet1.height), v(sweet2.y), v(sweet2.height))
+	}
+`)
+
+js ():
+	const svg = document.getElementById('gameZone')
+	svg.setAttribute('width', innerWidth)
+	svg.setAttribute('height', innerHeight)
+
+def drawNewSweet(p_w, p_h):
+	displayNewSVGElementIn('<rect width="' + p_w + '" height="' + p_h + '" rx="15" x="0" y="0" />', 'svg')
+
+def lifeOfSweet(p_color, p_x, p_y, p_width, p_height):
+	# birth
+	#==========
+	var thisSweet := drawNewSweet(p_width, p_height)
+	js (thisSweet, p_color, p_x, p_y):
+		thisSweet.style.fill = p_color
+		thisSweet.setAttribute('x', p_x)
+		thisSweet.setAttribute('y', p_y)
+		thisSweet.dx = Math.floor(5*Math.random())-2
+		thisSweet.dy = Math.floor(5*Math.random())-2
+		thisSweet.type = Math.floor(2*Math.random())
+		thisSweet.eltCollision = null
+		thisSweet.age = 0
+	
+	# after birth
+	#=============
+	var move
+	var newBirth
+	par:
+		# broadcasting the sweet
+		#-----------------------
+		whileTrueAwaitFrame send thisSweet:
+			send('oneSweet', thisSweet)
+		
+		# bouncing and meeting management
+		#--------------------------------
+		whileTrueAwaitFrame adapt thisSweet:
+			thisSweet.age += 1
+			
+			// Bouncing
+			//---------
+			if (v(thisSweet.x) + v(thisSweet.width) > innerWidth) thisSweet.dx = - Math.abs(thisSweet.dx)
+			if (v(thisSweet.x) < 0) thisSweet.dx = Math.abs(thisSweet.dx)
+			if (v(thisSweet.y) + v(thisSweet.height) > innerHeight) thisSweet.dy = - Math.abs(thisSweet.dy)
+			if (v(thisSweet.y) < 0) thisSweet.dy = Math.abs(thisSweet.dy)
+			
+			// Meeting
+			//--------
+			for (const otherSweet of events.get('oneSweet')) {
+				// When some sweets newly collide, generate a new birth
+				if (thisSweet != otherSweet && ! thisSweet.eltCollision && colliSweet(thisSweet, otherSweet)  ) {
+					thisSweet.eltCollision = otherSweet
+					if (between(thisSweet.age, 500, 2000) && between(otherSweet.age, 500, 2000) && thisSweet.type == 0 && otherSweet.type == 1) {
+						// send a 'New birth' signal
+						sugBip('newBirth')
+					}
+				// Mark the end of collision
+				} else if (thisSweet != otherSweet && thisSweet.eltCollision === otherSweet && ! colliSweet(thisSweet, otherSweet)  ) {
+					thisSweet.eltCollision = null
+				}
+			}
+		
+		# birth management
+		#--------------------------------
+		while true:
+			# await a newBirth signal
+			awaitBeep newBirth
+			# add a new parallel branch in 'supplLifeOfSweet' "par"
+			spawn supplLifeOfSweet:
+				blockCall0 lifeOfSweet:
+					'#cccccc'
+					js( ['thisSweet'], `return v(thisSweet.x)` )
+					js( ['thisSweet'], `return v(thisSweet.y)` )
+					js( ['thisSweet'], `return v(thisSweet.width)/2` )
+					js( ['thisSweet'], `return v(thisSweet.height)/2` )
+		
+		# movement of the sweet
+		#----------------------
+		whileTrueAwaitFrame play thisSweet: @move
+			thisSweet.setAttribute('x', v(thisSweet.x) + thisSweet.dx*delta/30)
+			thisSweet.setAttribute('y', v(thisSweet.y) + thisSweet.dy*delta/30)
+		
+		# pausing management
+		#-------------------
+		while true:
+			awaitClickBeep(thisSweet)
+			pause move
+			awaitClickBeep(thisSweet)
+			resume move
+
+#===============================
+#
+# Main program
+# ------------
+#
+#===============================
+var innerWidth := import('innerWidth')
+var innerHeight := import('innerHeight')
+var supplLifeOfSweet
+
+par supplBranchBy supplLifeOfSweet:
+	lifeOfSweet('#ff0000', 10, 10, 100, 100)
+	lifeOfSweet('#00ff00', innerWidth/3, innerHeight / 3, 100, 100)
+	lifeOfSweet('#0000ff', innerWidth*0.75, innerHeight*0.25, 100, 100)
+	lifeOfSweet('#ffff00', innerWidth*0.75, innerHeight * 0.75, 100, 100)
