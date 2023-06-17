@@ -46,12 +46,12 @@ def lifeOfSweet(p_color, p_x, p_y, p_width, p_height):
 	par:
 		# broadcasting the sweet
 		#-----------------------
-		whileTrueAwaitFrame send thisSweet:
+		whileTrueAwaitFrame_js send thisSweet:
 			send('oneSweet', thisSweet)
 		
 		# bouncing and meeting management
 		#--------------------------------
-		whileTrueAwaitFrame adapt thisSweet:
+		whileTrueAwaitFrame_js adapt thisSweet:
 			thisSweet.age += 1
 			
 			// Bouncing
@@ -93,7 +93,7 @@ def lifeOfSweet(p_color, p_x, p_y, p_width, p_height):
 		
 		# movement of the sweet
 		#----------------------
-		whileTrueAwaitFrame play thisSweet: @move
+		whileTrueAwaitFrame_js play thisSweet: @move
 			thisSweet.setAttribute('x', v(thisSweet.x) + thisSweet.dx*delta/30)
 			thisSweet.setAttribute('y', v(thisSweet.y) + thisSweet.dy*delta/30)
 		
