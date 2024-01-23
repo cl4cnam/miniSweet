@@ -1,7 +1,7 @@
 # miniSweet
 
-(funcSug example program)
+([FuncSug](https://github.com/cl4cnam/funcSug) example program)
 
-View code at https://github.com/cl4cnam/miniSweet/blob/main/miniSweet.fg.
+View [code](https://github.com/cl4cnam/miniSweet/blob/main/miniSweetPy.fg).
 
-Test it at https://cl4cnam.github.io/miniSweet/miniSweet.html.
+Test it [here](https://cl4cnam.github.io/miniSweet/miniSweetPy.html).
